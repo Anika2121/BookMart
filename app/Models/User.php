@@ -2,48 +2,95 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasFactory, Notifiable, SoftDeletes;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var list<string>
-     */
     protected $fillable = [
         'name',
         'email',
         'password',
+        'role',
+        'phone',
+        'avatar',
+        'google_id',
+        'facebook_id',
+        'deletion_requested_at',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var list<string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * Get the attributes that should be cast.
-     *
-     * @return array<string, string>
-     */
-    protected function casts(): array
+    protected $casts = [
+        'email_verified_at'     => 'datetime',
+        'password'              => 'hashed',
+        'deletion_requested_at' => 'datetime',
+    ];
+
+    public function isBuyer(): bool
     {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-        ];
+        return $this->role === 'buyer';
+    }
+
+    public function isSeller(): bool
+    {
+        return $this->role === 'seller';
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role === 'admin';
+    }
+
+    public function hasRequestedDeletion(): bool
+    {
+        return $this->deletion_requested_at !== null;
+    }
+
+    public function books()
+    {
+        return $this->hasMany('App\Models\Book');
+    }
+
+    public function orders()
+    {
+        return $this->hasMany('App\Models\Order', 'buyer_id');
+    }
+
+    public function buyerOrders()
+    {
+        return $this->hasMany('App\Models\Order', 'buyer_id');
+    }
+
+    public function sellerOrders()
+    {
+        return $this->hasManyThrough(
+            'App\Models\Order',
+            'App\Models\Book',
+            'user_id',
+            'book_id'
+        );
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany('App\Models\Review');
+    }
+
+    public function wishlists()
+    {
+        return $this->hasMany('App\Models\Wishlist');
+    }
+
+    public function addresses()
+    {
+        return $this->hasMany('App\Models\Address');
     }
 }
